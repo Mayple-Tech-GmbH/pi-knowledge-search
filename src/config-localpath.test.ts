@@ -181,10 +181,7 @@ describe("config.localPath resolution", () => {
   });
 
   it("getConfigPath: falls back to global when cwd has no settings", () => {
-    assert.equal(
-      getConfigPath(tmpProject),
-      path.join(tmpHome, ".pi", "knowledge-search.json")
-    );
+    assert.equal(getConfigPath(tmpProject), path.join(tmpHome, ".pi", "knowledge-search.json"));
   });
 
   // ─── getIndexDir ───────────────────────────────────────────────────
@@ -206,10 +203,7 @@ describe("config.localPath resolution", () => {
 
   it("getIndexDir: pi-total-recall cascade resolves to {base}/knowledge-search/index", () => {
     writeProjectSettings({ "pi-total-recall": { localPath: tmpCascade } });
-    assert.equal(
-      getIndexDir(tmpProject),
-      path.join(tmpCascade, "knowledge-search", "index")
-    );
+    assert.equal(getIndexDir(tmpProject), path.join(tmpCascade, "knowledge-search", "index"));
   });
 
   // ─── loadConfig integration ────────────────────────────────────────

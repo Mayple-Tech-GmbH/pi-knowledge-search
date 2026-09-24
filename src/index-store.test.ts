@@ -232,7 +232,13 @@ describe("KnowledgeIndex streaming load/save", () => {
       value: unknown,
       ...rest: unknown[]
     ): string => {
-      if (!fastPathCalled && value && typeof value === "object" && "version" in value && "entries" in value) {
+      if (
+        !fastPathCalled &&
+        value &&
+        typeof value === "object" &&
+        "version" in value &&
+        "entries" in value
+      ) {
         fastPathCalled = true;
         throw new RangeError("Invalid string length");
       }

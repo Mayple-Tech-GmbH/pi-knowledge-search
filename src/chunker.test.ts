@@ -320,7 +320,10 @@ describe("chunkMarkdown", () => {
 
     const chunks = chunkMarkdown(md, 40);
     const headings = chunks.map((c) => c.heading);
-    assert.ok(headings.includes("First Section"), `expected 'First Section' in ${JSON.stringify(headings)}`);
+    assert.ok(
+      headings.includes("First Section"),
+      `expected 'First Section' in ${JSON.stringify(headings)}`
+    );
     // No chunk should claim the YAML body as its heading.
     assert.ok(!headings.some((h) => h.includes("type: moc")));
     assert.ok(!headings.some((h) => h.includes("tags:")));
@@ -345,12 +348,7 @@ describe("chunkMarkdown", () => {
 
   it("uses fast path for very large files (>= 120k chars) without regressing basics", () => {
     // Build a large file that exceeds the LARGE_FILE_FAST_PATH_CHARS threshold.
-    const section = [
-      "## Section",
-      "",
-      "Paragraph of content. ".repeat(20),
-      "",
-    ].join("\n");
+    const section = ["## Section", "", "Paragraph of content. ".repeat(20), ""].join("\n");
     const md = section.repeat(400); // ~150k+ chars
     assert.ok(md.length >= 120_000, `expected >= 120k chars, got ${md.length}`);
 

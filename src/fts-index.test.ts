@@ -43,7 +43,7 @@ class TableEmbedder implements Embedder {
 
 describe("toFtsQuery", () => {
   it("strips FTS syntax characters", () => {
-    assert.equal(toFtsQuery('hello *world*'), '"hello" OR "world"');
+    assert.equal(toFtsQuery("hello *world*"), '"hello" OR "world"');
     assert.equal(toFtsQuery('"quoted" (paren)'), '"quoted" OR "paren"');
   });
 
@@ -246,7 +246,7 @@ describe("KnowledgeIndex hybrid search", () => {
       heading?: string;
       excerpt: string;
       vector: number[];
-    }>,
+    }>
   ): void {
     const internal = index as unknown as {
       data: {
@@ -463,11 +463,11 @@ describe("KnowledgeIndex FTS-only mode (no embedder)", () => {
   it("sync() indexes files without an embedder", async () => {
     fs.writeFileSync(
       path.join(vaultDir, "a.md"),
-      "# Recipes\n\nChocolate chip cookies recipe with flour and butter.",
+      "# Recipes\n\nChocolate chip cookies recipe with flour and butter."
     );
     fs.writeFileSync(
       path.join(vaultDir, "b.md"),
-      "# Errors\n\nERR_REQUIRE_CYCLE_MODULE bug report filed today.",
+      "# Errors\n\nERR_REQUIRE_CYCLE_MODULE bug report filed today."
     );
 
     const indexDir = path.join(tmpDir, "idx2");
@@ -489,11 +489,11 @@ describe("KnowledgeIndex FTS-only mode (no embedder)", () => {
   it("search() returns BM25 results in FTS-only mode", async () => {
     fs.writeFileSync(
       path.join(vaultDir, "a.md"),
-      "# Cookies\n\nChocolate chip cookies recipe with flour and butter.",
+      "# Cookies\n\nChocolate chip cookies recipe with flour and butter."
     );
     fs.writeFileSync(
       path.join(vaultDir, "b.md"),
-      "# Errors\n\nERR_REQUIRE_CYCLE_MODULE bug report filed today.",
+      "# Errors\n\nERR_REQUIRE_CYCLE_MODULE bug report filed today."
     );
 
     const indexDir = path.join(tmpDir, "idx3");
@@ -521,15 +521,15 @@ describe("KnowledgeIndex FTS-only mode (no embedder)", () => {
     fs.mkdirSync(indexDir);
     const idx = new KnowledgeIndex(makeFtsOnlyConfig(indexDir), null);
     await idx.load();
-    await assert.rejects(
-      () => idx.vectorSearch("anything", 5),
-      /requires an embedder/,
-    );
+    await assert.rejects(() => idx.vectorSearch("anything", 5), /requires an embedder/);
     await idx.close();
   });
 
   it("reopening an FTS-only index preserves all data", async () => {
-    fs.writeFileSync(path.join(vaultDir, "persistent.md"), "# Gate\n\nBlueberries and blackberries.");
+    fs.writeFileSync(
+      path.join(vaultDir, "persistent.md"),
+      "# Gate\n\nBlueberries and blackberries."
+    );
 
     const indexDir = path.join(tmpDir, "idx5");
     fs.mkdirSync(indexDir);

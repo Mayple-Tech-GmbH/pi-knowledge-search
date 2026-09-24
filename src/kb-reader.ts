@@ -104,9 +104,7 @@ export function resolveNote(
 ): ResolveResult {
   // Normalize extensions to always have a leading dot — config loaders don't
   // enforce this and a bare "md" would break all the `ref + ext` comparisons.
-  const exts = (opts.fileExtensions ?? DEFAULT_EXTS).map((e) =>
-    e.startsWith(".") ? e : "." + e
-  );
+  const exts = (opts.fileExtensions ?? DEFAULT_EXTS).map((e) => (e.startsWith(".") ? e : "." + e));
   const maxMatches = opts.maxMatches ?? 10;
   const { ref, subheading } = normalizeRef(rawRef);
 

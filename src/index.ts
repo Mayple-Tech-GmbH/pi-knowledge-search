@@ -42,8 +42,7 @@ export default function (pi: ExtensionAPI) {
       const alreadyInjected = ctx.sessionManager
         .getEntries()
         .some(
-          (e: SessionEntry) =>
-            e.type === "custom_message" && e.customType === "knowledge-overview"
+          (e: SessionEntry) => e.type === "custom_message" && e.customType === "knowledge-overview"
         );
       if (alreadyInjected) return { status: "skipped", reason: "already injected" };
     }
@@ -153,7 +152,10 @@ export default function (pi: ExtensionAPI) {
         execArgv: ["--no-warnings=ExperimentalWarning"],
         // Forward sessionCwd so the worker resolves the same project-local
         // settings.json (pi-knowledge-search.localPath / pi-total-recall cascade).
-        env: { ...process.env, KNOWLEDGE_SEARCH_CWD: sessionCwd ?? process.env.KNOWLEDGE_SEARCH_CWD ?? "" },
+        env: {
+          ...process.env,
+          KNOWLEDGE_SEARCH_CWD: sessionCwd ?? process.env.KNOWLEDGE_SEARCH_CWD ?? "",
+        },
       });
 
       let stdout = "";
@@ -304,11 +306,7 @@ export default function (pi: ExtensionAPI) {
         return;
       }
 
-      const providerType = providerChoice.split(" ")[0] as
-        | "none"
-        | "openai"
-        | "bedrock"
-        | "ollama";
+      const providerType = providerChoice.split(" ")[0] as "none" | "openai" | "bedrock" | "ollama";
 
       let configFile: ConfigFile;
 
@@ -372,7 +370,10 @@ export default function (pi: ExtensionAPI) {
 
       // Save and confirm
       saveConfig(configFile!, sessionCwd);
-      ctx.ui.notify(`Config saved to ${getConfigPath(sessionCwd)}. Run /reload to activate.`, "info");
+      ctx.ui.notify(
+        `Config saved to ${getConfigPath(sessionCwd)}. Run /reload to activate.`,
+        "info"
+      );
     },
   });
 
@@ -468,10 +469,7 @@ export default function (pi: ExtensionAPI) {
       ctx.ui.notify("Re-indexing...", "info");
       try {
         await index.rebuild();
-        ctx.ui.notify(
-          `Re-indexed: ${index.size()} files (${index.chunkCount()} chunks)`,
-          "info"
-        );
+        ctx.ui.notify(`Re-indexed: ${index.size()} files (${index.chunkCount()} chunks)`, "info");
       } catch (err: any) {
         ctx.ui.notify(`Re-index failed: ${err.message}`, "error");
       }
@@ -628,7 +626,8 @@ export default function (pi: ExtensionAPI) {
         const home = process.env.HOME || "";
         const listed = result.matches
           .map((m, i) => {
-            const display = home && m.absPath.startsWith(home) ? m.absPath.replace(home, "~") : m.absPath;
+            const display =
+              home && m.absPath.startsWith(home) ? m.absPath.replace(home, "~") : m.absPath;
             return `${i + 1}. ${display}  _(${m.reason})_`;
           })
           .join("\n");

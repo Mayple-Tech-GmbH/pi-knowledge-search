@@ -167,8 +167,7 @@ export class KnowledgeIndex {
         //  - dimensions match OR we're in FTS-only mode (dimensions are a
         //    vector-only concern; FTS-only installs should never invalidate
         //    a perfectly good entry map over them).
-        const dimsOk =
-          this.isFtsOnly || parsed?.dimensions === this.config.dimensions;
+        const dimsOk = this.isFtsOnly || parsed?.dimensions === this.config.dimensions;
         if (parsed && parsed.version === INDEX_VERSION && dimsOk) {
           this.data = parsed;
         }
@@ -226,13 +225,22 @@ export class KnowledgeIndex {
       assembler.on("done", (asm) => {
         settle(() => resolve(asm.current as IndexData));
       });
-      stream.on("error", (e) => settle(() => resolve(null), () => reject(e)));
-      parser.on("error", (e) => settle(() => resolve(null), () => reject(e)));
+      stream.on("error", (e) =>
+        settle(
+          () => resolve(null),
+          () => reject(e)
+        )
+      );
+      parser.on("error", (e) =>
+        settle(
+          () => resolve(null),
+          () => reject(e)
+        )
+      );
 
       stream.pipe(parser);
     });
   }
-
 
   /**
    * Persist the index to disk.
@@ -540,14 +548,10 @@ export class KnowledgeIndex {
    * Throws if called in FTS-only mode — use `search()` or `hybridSearch()`
    * which degrade gracefully.
    */
-  async vectorSearch(
-    query: string,
-    limit: number,
-    signal?: AbortSignal,
-  ): Promise<SearchResult[]> {
+  async vectorSearch(query: string, limit: number, signal?: AbortSignal): Promise<SearchResult[]> {
     if (!this.embedder) {
       throw new Error(
-        "vectorSearch() requires an embedder — configure a provider or use search()/hybridSearch() instead.",
+        "vectorSearch() requires an embedder — configure a provider or use search()/hybridSearch() instead."
       );
     }
     const queryVector = await this.embedder.embed(query, signal);
@@ -602,11 +606,7 @@ export class KnowledgeIndex {
    *
    * Deduplicates so only the best chunk per file is returned.
    */
-  async hybridSearch(
-    query: string,
-    limit: number,
-    signal?: AbortSignal,
-  ): Promise<SearchResult[]> {
+  async hybridSearch(query: string, limit: number, signal?: AbortSignal): Promise<SearchResult[]> {
     const K = 60;
     // Pool size: pull 5× the requested limit from each backend so RRF has
     // enough candidates to rerank across. Matches session-search tuning.
@@ -634,8 +634,7 @@ export class KnowledgeIndex {
     // RRF fusion: score = Σ 1 / (k + rank) across all backends that hit this key.
     // Count active backends so the display scaling below makes sense when one
     // backend short-circuits (pure-BM25 fallback, vector-only fallback).
-    const activeBackends =
-      (vecRanks.size > 0 ? 1 : 0) + (ftsRanks.size > 0 ? 1 : 0);
+    const activeBackends = (vecRanks.size > 0 ? 1 : 0) + (ftsRanks.size > 0 ? 1 : 0);
     const fused = new Map<string, number>();
     for (const [key, r] of vecRanks) {
       fused.set(key, (fused.get(key) ?? 0) + 1 / (K + r));
@@ -693,7 +692,7 @@ export class KnowledgeIndex {
   private async runVectorRanks(
     query: string,
     poolSize: number,
-    signal?: AbortSignal,
+    signal?: AbortSignal
   ): Promise<Map<string, number>> {
     if (!this.embedder) return new Map();
     const queryVector = await this.embedder.embed(query, signal);

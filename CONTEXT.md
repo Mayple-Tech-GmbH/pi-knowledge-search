@@ -16,7 +16,7 @@ The embedding-backed similarity store. Lives alongside the FTS index — same di
 _Avoid_: embedding store (too generic).
 
 **FTS5 side-car**:
-A SQLite FTS5 database that sits *next to* the vector index and holds the same Chunks indexed for keyword search. "Side-car" is deliberate — it rides alongside the primary vector store, not instead of it. Can be **Backfilled** from an existing vector index without re-embedding.
+A SQLite FTS5 database that sits _next to_ the vector index and holds the same Chunks indexed for keyword search. "Side-car" is deliberate — it rides alongside the primary vector store, not instead of it. Can be **Backfilled** from an existing vector index without re-embedding.
 _Avoid_: keyword index (too generic), secondary index.
 
 **RRF** (Reciprocal Rank Fusion):

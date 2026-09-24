@@ -11,7 +11,9 @@ function globalIndexDir() {
 }
 function warnUnknownKeys(block, blockName, knownKeys) {
   if (!block || typeof block !== "object") return;
-  const unknown = Object.keys(block).filter((k) => !knownKeys.includes(k));
+  const unknown = Object.keys(block).filter(
+    (k) => !knownKeys.includes(k)
+  );
   if (unknown.length === 0) return;
   console.error(
     `pi-knowledge-search: ignoring unknown key(s) in settings.json "${blockName}" block: ${unknown.join(", ")} (expected: ${knownKeys.join(", ")})`
@@ -858,9 +860,7 @@ var FtsChunkIndex = class {
     const out = /* @__PURE__ */ new Map();
     if (!fts) return out;
     const db = this.requireDb();
-    const rows = db.prepare(
-      `SELECT key FROM chunks WHERE chunks MATCH ? ORDER BY bm25(chunks) LIMIT ?`
-    ).all(fts, limit);
+    const rows = db.prepare(`SELECT key FROM chunks WHERE chunks MATCH ? ORDER BY bm25(chunks) LIMIT ?`).all(fts, limit);
     let r = 1;
     for (const row of rows) {
       const key = String(row.key);
@@ -1027,8 +1027,20 @@ var KnowledgeIndex = class _KnowledgeIndex {
       assembler.on("done", (asm) => {
         settle(() => resolve(asm.current));
       });
-      stream.on("error", (e) => settle(() => resolve(null), () => reject(e)));
-      parser.on("error", (e) => settle(() => resolve(null), () => reject(e)));
+      stream.on(
+        "error",
+        (e) => settle(
+          () => resolve(null),
+          () => reject(e)
+        )
+      );
+      parser.on(
+        "error",
+        (e) => settle(
+          () => resolve(null),
+          () => reject(e)
+        )
+      );
       stream.pipe(parser);
     });
   }

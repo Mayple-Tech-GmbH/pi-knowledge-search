@@ -28,7 +28,11 @@ export function assertFts5Available(): void {
     cached = false;
     throw new Error(fts5ErrorMessage());
   } finally {
-    try { db.close(); } catch { /* noop */ }
+    try {
+      db.close();
+    } catch {
+      /* noop */
+    }
   }
 }
 

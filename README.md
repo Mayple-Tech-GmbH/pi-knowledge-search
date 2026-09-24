@@ -17,10 +17,10 @@ Docs that both backends agree on get boosted; either backend alone still surface
 
 The extension registers two LLM-facing tools:
 
-| Tool | What it does |
-|------|--------------|
-| `knowledge_search` | Hybrid vector + BM25 search over indexed files (and any Bedrock Knowledge Bases). Returns passage-level excerpts ranked by Reciprocal Rank Fusion. |
-| `kb_read` | Resolve a note reference — `[[wikilink]]`, basename, or relative path — to an indexed file and return its full content. Use when the model knows a note's name but not its full path, instead of running find/grep first. |
+| Tool               | What it does                                                                                                                                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `knowledge_search` | Hybrid vector + BM25 search over indexed files (and any Bedrock Knowledge Bases). Returns passage-level excerpts ranked by Reciprocal Rank Fusion.                                                                        |
+| `kb_read`          | Resolve a note reference — `[[wikilink]]`, basename, or relative path — to an indexed file and return its full content. Use when the model knows a note's name but not its full path, instead of running find/grep first. |
 
 `kb_read` handles `[[Foo]]`, `[[Foo|alias]]`, `[[Foo#Heading]]`, bare names with or without extension (`Foo`, `Foo.md`), and relative paths (`evergreen/foo`). Multi-match references get a disambiguation prompt instead of guessing.
 
@@ -268,8 +268,8 @@ By default, config lives at `~/.pi/knowledge-search.json` and the index at `~/.p
 ```jsonc
 {
   "pi-knowledge-search": {
-    "localPath": ".pi/knowledge-search"   // config.json + index/ under this path
-  }
+    "localPath": ".pi/knowledge-search", // config.json + index/ under this path
+  },
 }
 ```
 
@@ -278,9 +278,9 @@ Or via the [`pi-total-recall`](https://github.com/samfoy/pi-total-recall) cascad
 ```jsonc
 {
   "pi-total-recall": {
-    "localPath": ".pi/total-recall"
+    "localPath": ".pi/total-recall",
     // pi-knowledge-search → {project}/.pi/total-recall/knowledge-search/
-  }
+  },
 }
 ```
 

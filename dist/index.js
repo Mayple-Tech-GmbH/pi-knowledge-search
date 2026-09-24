@@ -15,7 +15,9 @@ function globalIndexDir() {
 }
 function warnUnknownKeys(block, blockName, knownKeys) {
   if (!block || typeof block !== "object") return;
-  const unknown = Object.keys(block).filter((k) => !knownKeys.includes(k));
+  const unknown = Object.keys(block).filter(
+    (k) => !knownKeys.includes(k)
+  );
   if (unknown.length === 0) return;
   console.error(
     `pi-knowledge-search: ignoring unknown key(s) in settings.json "${blockName}" block: ${unknown.join(", ")} (expected: ${knownKeys.join(", ")})`
@@ -868,9 +870,7 @@ var FtsChunkIndex = class {
     const out = /* @__PURE__ */ new Map();
     if (!fts) return out;
     const db = this.requireDb();
-    const rows = db.prepare(
-      `SELECT key FROM chunks WHERE chunks MATCH ? ORDER BY bm25(chunks) LIMIT ?`
-    ).all(fts, limit);
+    const rows = db.prepare(`SELECT key FROM chunks WHERE chunks MATCH ? ORDER BY bm25(chunks) LIMIT ?`).all(fts, limit);
     let r = 1;
     for (const row of rows) {
       const key = String(row.key);
@@ -1037,8 +1037,20 @@ var KnowledgeIndex = class _KnowledgeIndex {
       assembler.on("done", (asm) => {
         settle(() => resolve2(asm.current));
       });
-      stream.on("error", (e) => settle(() => resolve2(null), () => reject(e)));
-      parser.on("error", (e) => settle(() => resolve2(null), () => reject(e)));
+      stream.on(
+        "error",
+        (e) => settle(
+          () => resolve2(null),
+          () => reject(e)
+        )
+      );
+      parser.on(
+        "error",
+        (e) => settle(
+          () => resolve2(null),
+          () => reject(e)
+        )
+      );
       stream.pipe(parser);
     });
   }
@@ -1917,9 +1929,7 @@ function buildOverview(files, sourceDirs, opts = {}) {
         aboutText: findFolderAbout(sourceDir, folder)
       });
     }
-    folderList.sort(
-      (a, b) => b.noteCount - a.noteCount || a.path.localeCompare(b.path)
-    );
+    folderList.sort((a, b) => b.noteCount - a.noteCount || a.path.localeCompare(b.path));
     const trimmedFolders = folderList.slice(0, maxFolders);
     const sourceTotal = folderList.reduce((s, f) => s + f.noteCount, 0);
     totalNotes += sourceTotal;
@@ -2002,9 +2012,7 @@ function hasKnownExt(s, exts) {
   return exts.some((e) => lower.endsWith(e));
 }
 function resolveNote(rawRef, indexedFiles, opts = {}) {
-  const exts = (opts.fileExtensions ?? DEFAULT_EXTS).map(
-    (e) => e.startsWith(".") ? e : "." + e
-  );
+  const exts = (opts.fileExtensions ?? DEFAULT_EXTS).map((e) => e.startsWith(".") ? e : "." + e);
   const maxMatches = opts.maxMatches ?? 10;
   const { ref, subheading } = normalizeRef(rawRef);
   if (!ref) {
@@ -2210,7 +2218,10 @@ function index_default(pi) {
         execArgv: ["--no-warnings=ExperimentalWarning"],
         // Forward sessionCwd so the worker resolves the same project-local
         // settings.json (pi-knowledge-search.localPath / pi-total-recall cascade).
-        env: { ...process.env, KNOWLEDGE_SEARCH_CWD: sessionCwd ?? process.env.KNOWLEDGE_SEARCH_CWD ?? "" }
+        env: {
+          ...process.env,
+          KNOWLEDGE_SEARCH_CWD: sessionCwd ?? process.env.KNOWLEDGE_SEARCH_CWD ?? ""
+        }
       });
       let stdout = "";
       let stderrBuf = "";
@@ -2375,7 +2386,10 @@ function index_default(pi) {
         }
       }
       saveConfig(configFile, sessionCwd);
-      ctx.ui.notify(`Config saved to ${getConfigPath(sessionCwd)}. Run /reload to activate.`, "info");
+      ctx.ui.notify(
+        `Config saved to ${getConfigPath(sessionCwd)}. Run /reload to activate.`,
+        "info"
+      );
     }
   });
   pi.registerCommand("knowledge-add-kb", {
@@ -2448,10 +2462,7 @@ function index_default(pi) {
       ctx.ui.notify("Re-indexing...", "info");
       try {
         await index.rebuild();
-        ctx.ui.notify(
-          `Re-indexed: ${index.size()} files (${index.chunkCount()} chunks)`,
-          "info"
-        );
+        ctx.ui.notify(`Re-indexed: ${index.size()} files (${index.chunkCount()} chunks)`, "info");
       } catch (err) {
         ctx.ui.notify(`Re-index failed: ${err.message}`, "error");
       }

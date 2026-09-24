@@ -71,6 +71,7 @@ export interface BuildOverviewOptions {
   maxKeywordsPerFolder?: number;
 }
 
+// prettier-ignore
 const STOPWORDS = new Set<string>([
   // Common English stopwords.
   "the", "and", "for", "are", "but", "not", "you", "all", "can", "had", "her",
@@ -260,9 +261,7 @@ export function buildOverview(
         aboutText: findFolderAbout(sourceDir, folder),
       });
     }
-    folderList.sort(
-      (a, b) => b.noteCount - a.noteCount || a.path.localeCompare(b.path)
-    );
+    folderList.sort((a, b) => b.noteCount - a.noteCount || a.path.localeCompare(b.path));
     const trimmedFolders = folderList.slice(0, maxFolders);
     const sourceTotal = folderList.reduce((s, f) => s + f.noteCount, 0);
     totalNotes += sourceTotal;

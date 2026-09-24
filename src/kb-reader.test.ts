@@ -33,8 +33,16 @@ describe("normalizeRef", () => {
 
 describe("resolveNote", () => {
   const files: IndexedFile[] = [
-    { absPath: "/v/Notes/Evergreen/hybrid-search.md", relPath: "Notes/Evergreen/hybrid-search.md", sourceDir: "/v" },
-    { absPath: "/v/Notes/Evergreen/Rosie architecture.md", relPath: "Notes/Evergreen/Rosie architecture.md", sourceDir: "/v" },
+    {
+      absPath: "/v/Notes/Evergreen/hybrid-search.md",
+      relPath: "Notes/Evergreen/hybrid-search.md",
+      sourceDir: "/v",
+    },
+    {
+      absPath: "/v/Notes/Evergreen/Rosie architecture.md",
+      relPath: "Notes/Evergreen/Rosie architecture.md",
+      sourceDir: "/v",
+    },
     { absPath: "/v/TaskNotes/Tasks/foo.md", relPath: "TaskNotes/Tasks/foo.md", sourceDir: "/v" },
     { absPath: "/other/foo.md", relPath: "foo.md", sourceDir: "/other" },
   ];
@@ -95,7 +103,10 @@ describe("resolveNote", () => {
 
   it("treats a unique relpath suffix as high confidence", () => {
     const r = resolveNote("Evergreen/hybrid-search", files);
-    assert.ok(r.unique, `expected unique for relpath suffix, got matches=${JSON.stringify(r.matches)}`);
+    assert.ok(
+      r.unique,
+      `expected unique for relpath suffix, got matches=${JSON.stringify(r.matches)}`
+    );
     assert.equal(r.matches[0].absPath, "/v/Notes/Evergreen/hybrid-search.md");
   });
 
@@ -109,7 +120,10 @@ describe("resolveNote", () => {
     const r = resolveNote("Evergreen", files);
     // No file is literally named "Evergreen"; substring hits both evergreen notes.
     assert.ok(r.matches.length >= 2);
-    assert.equal(r.matches.every((m) => m.reason === "substring"), true);
+    assert.equal(
+      r.matches.every((m) => m.reason === "substring"),
+      true
+    );
     assert.equal(r.unique, false);
   });
 

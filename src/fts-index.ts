@@ -92,8 +92,7 @@ export class FtsChunkIndex {
   count(): number {
     const db = this.requireDb();
     const row = db.prepare("SELECT COUNT(*) AS n FROM chunks").get() as
-      | { n: number | bigint }
-      | undefined;
+      { n: number | bigint } | undefined;
     return Number(row?.n ?? 0);
   }
 
@@ -101,8 +100,7 @@ export class FtsChunkIndex {
   fileCount(): number {
     const db = this.requireDb();
     const row = db.prepare("SELECT COUNT(DISTINCT absPath) AS n FROM chunks").get() as
-      | { n: number | bigint }
-      | undefined;
+      { n: number | bigint } | undefined;
     return Number(row?.n ?? 0);
   }
 
@@ -116,7 +114,7 @@ export class FtsChunkIndex {
     db.prepare("DELETE FROM chunks WHERE key = ?").run(chunk.key);
     db.prepare(
       `INSERT INTO chunks (key, absPath, relPath, sourceDir, chunkIndex, mtime, heading, content)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       chunk.key,
       chunk.absPath,
@@ -125,7 +123,7 @@ export class FtsChunkIndex {
       chunk.chunkIndex,
       Math.round(chunk.mtime),
       chunk.heading ?? "",
-      chunk.content ?? "",
+      chunk.content ?? ""
     );
   }
 
@@ -135,7 +133,7 @@ export class FtsChunkIndex {
     const del = db.prepare("DELETE FROM chunks WHERE key = ?");
     const ins = db.prepare(
       `INSERT INTO chunks (key, absPath, relPath, sourceDir, chunkIndex, mtime, heading, content)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     );
     db.exec("BEGIN");
     try {
@@ -149,7 +147,7 @@ export class FtsChunkIndex {
           c.chunkIndex,
           Math.round(c.mtime),
           c.heading ?? "",
-          c.content ?? "",
+          c.content ?? ""
         );
       }
       db.exec("COMMIT");
@@ -166,9 +164,7 @@ export class FtsChunkIndex {
 
   /** Delete every chunk belonging to a given absolute file path. */
   deleteByAbsPath(absPath: string): number {
-    const res = this.requireDb()
-      .prepare("DELETE FROM chunks WHERE absPath = ?")
-      .run(absPath);
+    const res = this.requireDb().prepare("DELETE FROM chunks WHERE absPath = ?").run(absPath);
     return Number(res.changes ?? 0);
   }
 
@@ -191,7 +187,7 @@ export class FtsChunkIndex {
            FROM chunks
           WHERE chunks MATCH ?
           ORDER BY score
-          LIMIT ?`,
+          LIMIT ?`
       )
       .all(fts, limit) as Array<{
       key: string;
@@ -226,9 +222,7 @@ export class FtsChunkIndex {
     if (!fts) return out;
     const db = this.requireDb();
     const rows = db
-      .prepare(
-        `SELECT key FROM chunks WHERE chunks MATCH ? ORDER BY bm25(chunks) LIMIT ?`,
-      )
+      .prepare(`SELECT key FROM chunks WHERE chunks MATCH ? ORDER BY bm25(chunks) LIMIT ?`)
       .all(fts, limit) as Array<{ key: string }>;
     let r = 1;
     for (const row of rows) {

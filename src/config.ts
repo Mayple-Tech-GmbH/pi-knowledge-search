@@ -82,10 +82,12 @@ function globalIndexDir(): string {
  */
 function warnUnknownKeys(block: unknown, blockName: string, knownKeys: readonly string[]): void {
   if (!block || typeof block !== "object") return;
-  const unknown = Object.keys(block as Record<string, unknown>).filter((k) => !knownKeys.includes(k));
+  const unknown = Object.keys(block as Record<string, unknown>).filter(
+    (k) => !knownKeys.includes(k)
+  );
   if (unknown.length === 0) return;
   console.error(
-    `pi-knowledge-search: ignoring unknown key(s) in settings.json "${blockName}" block: ${unknown.join(", ")} (expected: ${knownKeys.join(", ")})`,
+    `pi-knowledge-search: ignoring unknown key(s) in settings.json "${blockName}" block: ${unknown.join(", ")} (expected: ${knownKeys.join(", ")})`
   );
 }
 
@@ -301,16 +303,11 @@ export function loadConfig(cwd?: string): Config | null {
   const overviewFile = file?.overview ?? {};
   const overview = {
     inject: envBool("KNOWLEDGE_SEARCH_OVERVIEW_INJECT") ?? overviewFile.inject ?? true,
-    maxDepth:
-      envInt("KNOWLEDGE_SEARCH_OVERVIEW_MAX_DEPTH") ?? overviewFile.maxDepth ?? 2,
+    maxDepth: envInt("KNOWLEDGE_SEARCH_OVERVIEW_MAX_DEPTH") ?? overviewFile.maxDepth ?? 2,
     maxFoldersPerDir:
-      envInt("KNOWLEDGE_SEARCH_OVERVIEW_MAX_FOLDERS") ??
-      overviewFile.maxFoldersPerDir ??
-      20,
+      envInt("KNOWLEDGE_SEARCH_OVERVIEW_MAX_FOLDERS") ?? overviewFile.maxFoldersPerDir ?? 20,
     maxKeywordsPerFolder:
-      envInt("KNOWLEDGE_SEARCH_OVERVIEW_MAX_KEYWORDS") ??
-      overviewFile.maxKeywordsPerFolder ??
-      5,
+      envInt("KNOWLEDGE_SEARCH_OVERVIEW_MAX_KEYWORDS") ?? overviewFile.maxKeywordsPerFolder ?? 5,
   };
 
   return {
