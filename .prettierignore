@@ -3,3 +3,5 @@ dist
 coverage
 build
 package-lock.json
+# Workflows are copied verbatim from the shared pi-cleanup templates.
+.github/workflows
