@@ -69,7 +69,7 @@ Or try without installing:
 pi -e git:github.com/samfoy/pi-knowledge-search
 ```
 
-Requires **Node 24+** — `node:sqlite` must include FTS5, which Node 22's bundled SQLite does not. On Node 22 you'll get `Error: no such table: chunks` at startup because the FTS5 virtual table never gets created.
+Requires **Node 22.19+** (pi's own floor), and `node:sqlite` must include FTS5. Node's bundled SQLite has FTS5 from 22.16 onward and in every 24.x release; older Node 22 releases lack it. On a runtime without FTS5 the extension fails at startup with an error naming the problem.
 
 ## Setup
 

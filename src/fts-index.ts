@@ -63,7 +63,7 @@ export class FtsChunkIndex {
   load(): void {
     if (this.db) return;
     // Fail fast with an actionable message on Node runtimes without FTS5
-    // (Node 22's bundled SQLite omits it). Without this probe the
+    // (Node's bundled SQLite omits it before 22.16). Without this probe the
     // CREATE VIRTUAL TABLE below leaves the DB file with no tables and
     // later queries surface "no such table: chunks".
     assertFts5Available();
