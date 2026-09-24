@@ -144,7 +144,7 @@ export default function (pi: ExtensionAPI) {
 
     function spawnWorker() {
       // Use pre-compiled worker to avoid ESM/CJS cycle with tsx on Node 25+
-      // Rebuild with: npx esbuild src/sync-worker.ts --bundle --platform=node --format=esm --outfile=dist/sync-worker.mjs --external:better-sqlite3 --packages=external
+      // Rebuild with: npm run build:worker
       const workerPath = join(import.meta.dirname, "..", "dist", "sync-worker.mjs");
       const worker = fork(workerPath, [], {
         stdio: ["ignore", "pipe", "pipe", "ipc"],
