@@ -2135,6 +2135,15 @@ function index_default(pi) {
   let sessionCwd;
   let syncDone = false;
   let workerExitExpected = false;
+  let indexLoaded = null;
+  function ensureIndexLoaded() {
+    if (!index) return Promise.resolve();
+    indexLoaded ??= index.load().catch((err) => {
+      indexLoaded = null;
+      throw err;
+    });
+    return indexLoaded;
+  }
   function injectOverview(ctx, force) {
     if (!index || !currentConfig) return { status: "skipped", reason: "not configured" };
     if (!force && !currentConfig.overview.inject) {
@@ -2178,14 +2187,11 @@ function index_default(pi) {
       return;
     }
     if (!currentConfig) return;
-    let indexLoaded = Promise.resolve();
     if (currentConfig.provider) {
       const embedder = createEmbedder(currentConfig.provider, currentConfig.dimensions);
       index = new KnowledgeIndex(currentConfig, embedder);
-      indexLoaded = index.load();
     } else if (currentConfig.dirs.length > 0) {
       index = new KnowledgeIndex(currentConfig, null);
-      indexLoaded = index.load();
     }
     if (currentConfig.knowledgeBases.length > 0) {
       kbSearcher = new BedrockKBSearcher(currentConfig.knowledgeBases);
@@ -2194,17 +2200,19 @@ function index_default(pi) {
       syncDone = true;
       return;
     }
-    indexLoaded.then(() => {
-      try {
-        injectOverview(ctx, false);
-      } catch (err) {
+    if (currentConfig.overview.inject) {
+      ensureIndexLoaded().then(() => {
+        try {
+          injectOverview(ctx, false);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`knowledge-search: overview injection failed: ${msg}`);
+        }
+      }).catch((err) => {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`knowledge-search: overview injection failed: ${msg}`);
-      }
-    }).catch((err) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`knowledge-search: index load failed: ${msg}`);
-    });
+        console.error(`knowledge-search: index load failed: ${msg}`);
+      });
+    }
     const MAX_WORKER_RESTARTS = 3;
     const RESTART_WINDOW_MS = 6e4;
     let workerRestartCount = 0;
@@ -2246,9 +2254,12 @@ function index_default(pi) {
         if (code === 0 && stdout) {
           try {
             const result = JSON.parse(stdout);
-            await index.load();
             const changes = result.added + result.updated + result.removed;
             if (changes > 0) {
+              if (indexLoaded) {
+                indexLoaded = null;
+                await ensureIndexLoaded();
+              }
               ctx.ui.setStatus(
                 "knowledge-search",
                 `Index: +${result.added} ~${result.updated} -${result.removed} (${result.size} files, ${result.chunks} chunks)`
@@ -2437,6 +2448,7 @@ function index_default(pi) {
     description: "Rebuild and re-inject the knowledge-search vault overview (use after config changes or vault growth)",
     handler: async (_args, ctx) => {
       try {
+        await ensureIndexLoaded();
         const result = injectOverview(ctx, true);
         if (result.status === "injected") {
           ctx.ui.notify(
@@ -2461,6 +2473,7 @@ function index_default(pi) {
       }
       ctx.ui.notify("Re-indexing...", "info");
       try {
+        await ensureIndexLoaded();
         await index.rebuild();
         ctx.ui.notify(`Re-indexed: ${index.size()} files (${index.chunkCount()} chunks)`, "info");
       } catch (err) {
@@ -2485,6 +2498,7 @@ function index_default(pi) {
     ],
     parameters: searchParams,
     async execute(toolCallId, params, signal) {
+      await ensureIndexLoaded();
       const hasLocalIndex = index && index.size() > 0;
       const hasKB = !!kbSearcher;
       if (!hasLocalIndex && !hasKB) {
@@ -2553,6 +2567,7 @@ ${r.excerpt}`;
     ],
     parameters: readParams,
     async execute(_toolCallId, params) {
+      await ensureIndexLoaded();
       if (!index || index.size() === 0) {
         const msg = !index ? "knowledge-search is not configured. Run /knowledge-search-setup to set it up." : !syncDone ? "Index is still syncing in the background. Try again in a moment." : "Index is empty.";
         return { content: [{ type: "text", text: msg }], details: {} };
