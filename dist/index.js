@@ -2135,6 +2135,19 @@ function index_default(pi) {
   let sessionCwd;
   let syncDone = false;
   let workerExitExpected = false;
+  let indexLoad = null;
+  let indexStale = false;
+  function ensureIndexLoaded() {
+    if (!index) return Promise.resolve();
+    if (indexLoad && !indexStale) return indexLoad;
+    indexStale = false;
+    const loading = index.load().catch((err) => {
+      if (indexLoad === loading) indexLoad = null;
+      throw err;
+    });
+    indexLoad = loading;
+    return loading;
+  }
   function injectOverview(ctx, force) {
     if (!index || !currentConfig) return { status: "skipped", reason: "not configured" };
     if (!force && !currentConfig.overview.inject) {
@@ -2182,10 +2195,13 @@ function index_default(pi) {
     if (currentConfig.provider) {
       const embedder = createEmbedder(currentConfig.provider, currentConfig.dimensions);
       index = new KnowledgeIndex(currentConfig, embedder);
-      indexLoaded = index.load();
     } else if (currentConfig.dirs.length > 0) {
       index = new KnowledgeIndex(currentConfig, null);
-      indexLoaded = index.load();
+    }
+    indexLoad = null;
+    indexStale = false;
+    if (index && currentConfig.overview.inject) {
+      indexLoaded = ensureIndexLoaded();
     }
     if (currentConfig.knowledgeBases.length > 0) {
       kbSearcher = new BedrockKBSearcher(currentConfig.knowledgeBases);
@@ -2246,7 +2262,7 @@ function index_default(pi) {
         if (code === 0 && stdout) {
           try {
             const result = JSON.parse(stdout);
-            await index.load();
+            indexStale = true;
             const changes = result.added + result.updated + result.removed;
             if (changes > 0) {
               ctx.ui.setStatus(
@@ -2437,6 +2453,7 @@ function index_default(pi) {
     description: "Rebuild and re-inject the knowledge-search vault overview (use after config changes or vault growth)",
     handler: async (_args, ctx) => {
       try {
+        await ensureIndexLoaded();
         const result = injectOverview(ctx, true);
         if (result.status === "injected") {
           ctx.ui.notify(
@@ -2461,6 +2478,7 @@ function index_default(pi) {
       }
       ctx.ui.notify("Re-indexing...", "info");
       try {
+        await ensureIndexLoaded();
         await index.rebuild();
         ctx.ui.notify(`Re-indexed: ${index.size()} files (${index.chunkCount()} chunks)`, "info");
       } catch (err) {
@@ -2485,6 +2503,7 @@ function index_default(pi) {
     ],
     parameters: searchParams,
     async execute(toolCallId, params, signal) {
+      await ensureIndexLoaded();
       const hasLocalIndex = index && index.size() > 0;
       const hasKB = !!kbSearcher;
       if (!hasLocalIndex && !hasKB) {
@@ -2553,6 +2572,7 @@ ${r.excerpt}`;
     ],
     parameters: readParams,
     async execute(_toolCallId, params) {
+      await ensureIndexLoaded();
       if (!index || index.size() === 0) {
         const msg = !index ? "knowledge-search is not configured. Run /knowledge-search-setup to set it up." : !syncDone ? "Index is still syncing in the background. Try again in a moment." : "Index is empty.";
         return { content: [{ type: "text", text: msg }], details: {} };

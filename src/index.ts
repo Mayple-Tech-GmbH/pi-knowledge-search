@@ -18,6 +18,23 @@ export default function (pi: ExtensionAPI) {
   let syncDone = false;
   let workerExitExpected = false;
 
+  // The on-disk index can be hundreds of MB of JSON, and parsing it blocks pi's event loop for
+  // seconds, so it is read on first use (a tool call or the startup overview) rather than at every
+  // session_start, and re-read lazily after the sync worker rewrites it.
+  let indexLoad: Promise<void> | null = null;
+  let indexStale = false;
+  function ensureIndexLoaded(): Promise<void> {
+    if (!index) return Promise.resolve();
+    if (indexLoad && !indexStale) return indexLoad;
+    indexStale = false;
+    const loading = index.load().catch((err: unknown) => {
+      if (indexLoad === loading) indexLoad = null;
+      throw err;
+    });
+    indexLoad = loading;
+    return loading;
+  }
+
   /**
    * Build and inject the folder+keyword overview as a custom message.
    * @param force When true, inject even if one is already present.
@@ -89,15 +106,15 @@ export default function (pi: ExtensionAPI) {
     if (currentConfig.provider) {
       const embedder = createEmbedder(currentConfig.provider, currentConfig.dimensions);
       index = new KnowledgeIndex(currentConfig, embedder);
-      // Fire-and-forget: don't block session_start on the (potentially
-      // 99 MB) JSON.parse. injectOverview below awaits this promise; the
-      // outbound model HTTP request can fire as soon as session_start
-      // returns. See plan: Slice B'.
-      indexLoaded = index.load();
     } else if (currentConfig.dirs.length > 0) {
       // FTS-only mode — no embedder, keyword search still works zero-config.
       index = new KnowledgeIndex(currentConfig, null);
-      indexLoaded = index.load();
+    }
+    indexLoad = null;
+    indexStale = false;
+    // Only the startup overview needs the index this early; otherwise it loads on the first tool call.
+    if (index && currentConfig.overview.inject) {
+      indexLoaded = ensureIndexLoaded();
     }
 
     if (currentConfig.knowledgeBases.length > 0) {
@@ -114,11 +131,8 @@ export default function (pi: ExtensionAPI) {
     // unless one is already in the session or the user disabled it.
     // Runs off whatever the index has loaded from disk — the worker's
     // incremental sync below will update the store for future sessions.
-    //
-    // Gated on indexLoaded so the synchronous JSON.parse stays off the
-    // session_start critical path; injectOverview itself runs in a
-    // microtask after load() resolves, while pi's outbound model HTTP
-    // already fired during session_start's earlier return.
+    // indexLoaded is the lazy load started above only when the overview is
+    // enabled; with it disabled nothing is read here.
     // ----------------------------------------------------------------
     indexLoaded
       .then(() => {
@@ -189,8 +203,8 @@ export default function (pi: ExtensionAPI) {
         if (code === 0 && stdout) {
           try {
             const result = JSON.parse(stdout);
-            // Reload the index from disk since the worker updated it
-            await index!.load();
+            // The worker rewrote the index on disk; the next tool call re-reads it.
+            indexStale = true;
             const changes = result.added + result.updated + result.removed;
             if (changes > 0) {
               ctx.ui.setStatus(
@@ -443,6 +457,7 @@ export default function (pi: ExtensionAPI) {
       "Rebuild and re-inject the knowledge-search vault overview (use after config changes or vault growth)",
     handler: async (_args, ctx) => {
       try {
+        await ensureIndexLoaded();
         const result = injectOverview(ctx, true);
         if (result.status === "injected") {
           ctx.ui.notify(
@@ -468,6 +483,7 @@ export default function (pi: ExtensionAPI) {
       }
       ctx.ui.notify("Re-indexing...", "info");
       try {
+        await ensureIndexLoaded();
         await index.rebuild();
         ctx.ui.notify(`Re-indexed: ${index.size()} files (${index.chunkCount()} chunks)`, "info");
       } catch (err: any) {
@@ -500,6 +516,7 @@ export default function (pi: ExtensionAPI) {
     ],
     parameters: searchParams,
     async execute(toolCallId, params, signal) {
+      await ensureIndexLoaded();
       const hasLocalIndex = index && index.size() > 0;
       const hasKB = !!kbSearcher;
 
@@ -596,6 +613,7 @@ export default function (pi: ExtensionAPI) {
     ],
     parameters: readParams,
     async execute(_toolCallId, params) {
+      await ensureIndexLoaded();
       if (!index || index.size() === 0) {
         const msg = !index
           ? "knowledge-search is not configured. Run /knowledge-search-setup to set it up."
