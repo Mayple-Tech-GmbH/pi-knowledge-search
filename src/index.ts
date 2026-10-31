@@ -17,20 +17,22 @@ export default function (pi: ExtensionAPI) {
   let sessionCwd: string | undefined;
   let syncDone = false;
   let workerExitExpected = false;
-  let indexLoaded: Promise<void> | null = null;
 
-  /**
-   * Load the on-disk index into this process on first use. The parse costs
-   * hundreds of MB for a large vault, so a session that never searches (and
-   * has overview injection off) never pays it.
-   */
+  // The on-disk index can be hundreds of MB of JSON, and parsing it blocks pi's event loop for
+  // seconds, so it is read on first use (a tool call or the startup overview) rather than at every
+  // session_start, and re-read lazily after the sync worker rewrites it.
+  let indexLoad: Promise<void> | null = null;
+  let indexStale = false;
   function ensureIndexLoaded(): Promise<void> {
     if (!index) return Promise.resolve();
-    indexLoaded ??= index.load().catch((err: unknown) => {
-      indexLoaded = null;
+    if (indexLoad && !indexStale) return indexLoad;
+    indexStale = false;
+    const loading = index.load().catch((err: unknown) => {
+      if (indexLoad === loading) indexLoad = null;
       throw err;
     });
-    return indexLoaded;
+    indexLoad = loading;
+    return loading;
   }
 
   /**
@@ -100,12 +102,19 @@ export default function (pi: ExtensionAPI) {
     }
     if (!currentConfig) return;
 
+    let indexLoaded: Promise<void> = Promise.resolve();
     if (currentConfig.provider) {
       const embedder = createEmbedder(currentConfig.provider, currentConfig.dimensions);
       index = new KnowledgeIndex(currentConfig, embedder);
     } else if (currentConfig.dirs.length > 0) {
       // FTS-only mode — no embedder, keyword search still works zero-config.
       index = new KnowledgeIndex(currentConfig, null);
+    }
+    indexLoad = null;
+    indexStale = false;
+    // Only the startup overview needs the index this early; otherwise it loads on the first tool call.
+    if (index && currentConfig.overview.inject) {
+      indexLoaded = ensureIndexLoaded();
     }
 
     if (currentConfig.knowledgeBases.length > 0) {
@@ -122,29 +131,23 @@ export default function (pi: ExtensionAPI) {
     // unless one is already in the session or the user disabled it.
     // Runs off whatever the index has loaded from disk — the worker's
     // incremental sync below will update the store for future sessions.
-    //
-    // Fire-and-forget so the JSON.parse stays off the session_start
-    // critical path; injectOverview itself runs in a microtask after
-    // load() resolves, while pi's outbound model HTTP already fired during
-    // session_start's earlier return. With injection off, the index is
-    // loaded lazily by the first tool call instead.
+    // indexLoaded is the lazy load started above only when the overview is
+    // enabled; with it disabled nothing is read here.
     // ----------------------------------------------------------------
-    if (currentConfig.overview.inject) {
-      ensureIndexLoaded()
-        .then(() => {
-          try {
-            injectOverview(ctx, false);
-          } catch (err: unknown) {
-            // Overview is a nice-to-have — never let it break startup.
-            const msg = err instanceof Error ? err.message : String(err);
-            console.error(`knowledge-search: overview injection failed: ${msg}`);
-          }
-        })
-        .catch((err: unknown) => {
+    indexLoaded
+      .then(() => {
+        try {
+          injectOverview(ctx, false);
+        } catch (err: unknown) {
+          // Overview is a nice-to-have — never let it break startup.
           const msg = err instanceof Error ? err.message : String(err);
-          console.error(`knowledge-search: index load failed: ${msg}`);
-        });
-    }
+          console.error(`knowledge-search: overview injection failed: ${msg}`);
+        }
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`knowledge-search: index load failed: ${msg}`);
+      });
 
     // Sync in a child process so it never blocks the main event loop
     const MAX_WORKER_RESTARTS = 3;
@@ -202,13 +205,9 @@ export default function (pi: ExtensionAPI) {
             const result = JSON.parse(stdout);
             const changes = result.added + result.updated + result.removed;
             if (changes > 0) {
-              // Reload the index from disk since the worker updated it. A
-              // process that has not loaded it yet reads the new file on
-              // first use, and an unchanged index needs no second parse.
-              if (indexLoaded) {
-                indexLoaded = null;
-                await ensureIndexLoaded();
-              }
+              // The worker rewrote the index on disk; the next tool call re-reads it.
+              // It saves only when something changed, so a no-op sync needs no second parse.
+              indexStale = true;
               ctx.ui.setStatus(
                 "knowledge-search",
                 `Index: +${result.added} ~${result.updated} -${result.removed} (${result.size} files, ${result.chunks} chunks)`

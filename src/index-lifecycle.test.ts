@@ -118,12 +118,16 @@ describe("extension index lifecycle", () => {
     await session.shutdown();
   });
 
-  it("reloads a loaded index when the worker changed it", async () => {
+  it("re-reads a loaded index on next use when the worker changed it", async () => {
     writeConfig(true);
     const session = await startSession();
     assert.equal(loadCalls.mock.callCount(), 1, "overview injection loads eagerly");
     await workersDone();
-    assert.equal(loadCalls.mock.callCount(), 2, "worker added a file, so the index reloads");
+    assert.equal(loadCalls.mock.callCount(), 1, "the sync only marks the index stale");
+
+    const result = await session.search("zebra");
+    assert.match(result.content[0].text, /note\.md/);
+    assert.equal(loadCalls.mock.callCount(), 2, "worker added a file, so the next search reloads");
     await session.shutdown();
   });
 
@@ -138,7 +142,10 @@ describe("extension index lifecycle", () => {
     const second = await startSession();
     await workersDone();
     assert.equal(workers.length, 1);
-    assert.equal(loadCalls.mock.callCount(), 1, "only the eager load; no reload");
+    assert.equal(loadCalls.mock.callCount(), 1, "only the eager load");
+
+    await second.search("zebra");
+    assert.equal(loadCalls.mock.callCount(), 1, "a no-op sync leaves the index fresh; no reload");
     await second.shutdown();
   });
 });

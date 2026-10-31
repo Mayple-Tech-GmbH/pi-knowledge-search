@@ -2135,14 +2135,18 @@ function index_default(pi) {
   let sessionCwd;
   let syncDone = false;
   let workerExitExpected = false;
-  let indexLoaded = null;
+  let indexLoad = null;
+  let indexStale = false;
   function ensureIndexLoaded() {
     if (!index) return Promise.resolve();
-    indexLoaded ??= index.load().catch((err) => {
-      indexLoaded = null;
+    if (indexLoad && !indexStale) return indexLoad;
+    indexStale = false;
+    const loading = index.load().catch((err) => {
+      if (indexLoad === loading) indexLoad = null;
       throw err;
     });
-    return indexLoaded;
+    indexLoad = loading;
+    return loading;
   }
   function injectOverview(ctx, force) {
     if (!index || !currentConfig) return { status: "skipped", reason: "not configured" };
@@ -2187,11 +2191,17 @@ function index_default(pi) {
       return;
     }
     if (!currentConfig) return;
+    let indexLoaded = Promise.resolve();
     if (currentConfig.provider) {
       const embedder = createEmbedder(currentConfig.provider, currentConfig.dimensions);
       index = new KnowledgeIndex(currentConfig, embedder);
     } else if (currentConfig.dirs.length > 0) {
       index = new KnowledgeIndex(currentConfig, null);
+    }
+    indexLoad = null;
+    indexStale = false;
+    if (index && currentConfig.overview.inject) {
+      indexLoaded = ensureIndexLoaded();
     }
     if (currentConfig.knowledgeBases.length > 0) {
       kbSearcher = new BedrockKBSearcher(currentConfig.knowledgeBases);
@@ -2200,19 +2210,17 @@ function index_default(pi) {
       syncDone = true;
       return;
     }
-    if (currentConfig.overview.inject) {
-      ensureIndexLoaded().then(() => {
-        try {
-          injectOverview(ctx, false);
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          console.error(`knowledge-search: overview injection failed: ${msg}`);
-        }
-      }).catch((err) => {
+    indexLoaded.then(() => {
+      try {
+        injectOverview(ctx, false);
+      } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`knowledge-search: index load failed: ${msg}`);
-      });
-    }
+        console.error(`knowledge-search: overview injection failed: ${msg}`);
+      }
+    }).catch((err) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`knowledge-search: index load failed: ${msg}`);
+    });
     const MAX_WORKER_RESTARTS = 3;
     const RESTART_WINDOW_MS = 6e4;
     let workerRestartCount = 0;
@@ -2256,10 +2264,7 @@ function index_default(pi) {
             const result = JSON.parse(stdout);
             const changes = result.added + result.updated + result.removed;
             if (changes > 0) {
-              if (indexLoaded) {
-                indexLoaded = null;
-                await ensureIndexLoaded();
-              }
+              indexStale = true;
               ctx.ui.setStatus(
                 "knowledge-search",
                 `Index: +${result.added} ~${result.updated} -${result.removed} (${result.size} files, ${result.chunks} chunks)`

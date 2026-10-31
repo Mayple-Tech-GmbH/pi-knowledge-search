@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.8
+
+### Fixed
+
+- The index is read on first use instead of at every session start. Parsing a large `index.json`
+  (243 MB here) blocked pi's event loop for about 3.4 s in every pi process, including headless
+  sub-agents, and again after every background sync. `knowledge_search`, `kb_read`,
+  `/knowledge-overview` and `/knowledge-reindex` now load it on demand; a completed sync marks it
+  stale so the next call re-reads it. The startup overview, when enabled, still loads it at start.
+
 ## 1.3.7
 
 Covers everything since 1.3.5, the last version on npm. 1.3.6 was tagged in
